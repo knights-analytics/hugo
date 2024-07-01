@@ -222,7 +222,6 @@ func (p *FeatureExtractionPipeline) Postprocess(batch *PipelineBatch) (*FeatureE
 	tokenEmbeddings := make([][]float32, maxSequenceLength)
 	tokenEmbeddingsCounter := 0
 	batchInputCounter := 0
-
 	for _, result := range batch.OutputTensors[0].GetData() {
 		outputEmbedding[outputEmbeddingCounter] = result
 		if outputEmbeddingCounter == int(embeddingDimension)-1 {

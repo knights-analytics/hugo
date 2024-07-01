@@ -1,5 +1,7 @@
 package main
 
+// package hugot
+
 import (
 	"bufio"
 	"context"
