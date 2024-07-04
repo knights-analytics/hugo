@@ -5,11 +5,12 @@ import (
 	"fmt"
 	"os"
 	"runtime"
+	"sort"
+	"sync"
 	"time"
 
 	"github.com/knights-analytics/hugot"
 	"github.com/knights-analytics/hugot/pipelines"
-	// "reflect"
 )
 
 func check(err error) {
@@ -37,36 +38,62 @@ func extractFeatures(records [][]string, featurePipeline *pipelines.FeatureExtra
 	const batchSize = 32
 	var output [][]float32
 	totalProcessed := 0
-	// records = records[:100]
-	batch := make([]string, 0, batchSize) // Pre-allocate capacity for the batch
+	records = records[:100]
 
-	fmt.Println("starting pipeline loop")
+	type result struct {
+		embeddings [][]float32
+		err        error
+	}
 
-	for _, row := range records {
-		batch = append(batch, row[5])
-		if len(batch) == batchSize {
+	batchCh := make(chan []string, len(records)/batchSize+1)
+	resultCh := make(chan result, len(records)/batchSize+1)
+	var wg sync.WaitGroup
+
+	// Worker function
+	worker := func() {
+		defer wg.Done()
+		for batch := range batchCh {
 			batchResult, err := featurePipeline.RunPipeline(batch)
-			if err != nil {
-				fmt.Println("Error running pipeline:", err)
-				continue // Skip this batch and continue
-			}
-
-			output = append(output, batchResult.Embeddings...)
-			totalProcessed += batchSize
-			batch = batch[:0] // Reset batch without reallocating
+			resultCh <- result{batchResult.Embeddings, err}
 		}
 	}
 
-	// Process any remaining records in the last batch
-	if len(batch) > 0 {
-		fmt.Println("processing remaining batch")
-		batchResult, err := featurePipeline.RunPipeline(batch)
-		if err != nil {
-			fmt.Println("Error running pipeline:", err)
-			panic(err.Error())
+	// Start workers
+	numWorkers := 4 // Adjust based on your available CPU cores
+	for i := 0; i < numWorkers; i++ {
+		wg.Add(1)
+		go worker()
+	}
+
+	// Distribute batches to workers
+	go func() {
+		var batch []string
+		for _, row := range records {
+			batch = append(batch, row[5])
+			if len(batch) == batchSize {
+				batchCh <- batch
+				batch = nil
+			}
 		}
-		output = append(output, batchResult.Embeddings...)
-		totalProcessed += len(batch)
+		if len(batch) > 0 {
+			batchCh <- batch
+		}
+		close(batchCh)
+	}()
+
+	// Collect results
+	go func() {
+		wg.Wait()
+		close(resultCh)
+	}()
+
+	for res := range resultCh {
+		if res.err != nil {
+			fmt.Println("Error running pipeline:", res.err)
+			continue // Skip this batch and continue
+		}
+		output = append(output, res.embeddings...)
+		totalProcessed += len(res.embeddings)
 	}
 
 	duration := time.Since(start)
@@ -75,10 +102,10 @@ func extractFeatures(records [][]string, featurePipeline *pipelines.FeatureExtra
 
 func main() {
 	metrics := make(map[string]interface{})
+	fmt.Println(runtime.NumCPU())
 
 	// new hugot instance
 	startInitialization := time.Now()
-	// session, err := hugot.NewSession()
 	session, err := hugot.NewSession(
 		hugot.WithInterOpNumThreads(1),
 		hugot.WithIntraOpNumThreads(1),
@@ -108,6 +135,7 @@ func main() {
 	defer file.Close()
 	reader := csv.NewReader(file)
 	records, err := reader.ReadAll()
+
 	if err != nil {
 		fmt.Println("Error:", err)
 		panic(err.Error())
@@ -127,11 +155,10 @@ func main() {
 	var vector [][]float32
 	for i := 0; i < numIters; i++ {
 		output, duration, totalProcessed := extractFeatures(records, featurePipeline)
-		// fmt.Println("expected 100 embeddings, got ", len(output))
 		seconds := duration.Seconds()
 		timePerIter = append(timePerIter, seconds)
-		totalTime = totalTime + duration.Seconds()
-		fmt.Printf("Iteration %d: Processed %d inputs in %f seconds\n", i+1, totalProcessed, duration.Seconds())
+		totalTime += seconds
+		fmt.Printf("Iteration %d: Processed %d inputs in %f seconds\n", i+1, totalProcessed, seconds)
 		vector = output
 
 		fmt.Printf("Memory usage after iteration %d:\n", i+1)
@@ -140,36 +167,55 @@ func main() {
 
 	metrics["time per iteration"] = timePerIter
 	metrics["average runtime"] = totalTime / float64(numIters)
+
 	fmt.Println(metrics)
 	fmt.Println(len(vector))
 
-	/**
-		uncomment following lines to compare Golang/python outputs
-	**/
-	// file1, err1 := os.Open("output.csv")
+	file3, err := os.Create("golang_embeddings.csv")
+	if err != nil {
+		fmt.Println("failed")
+	}
+	defer file3.Close()
+
+	// Create a CSV writer
+	writer := csv.NewWriter(file3)
+	defer writer.Flush()
+
+	// sort embeddings because currently appened out of order
+	sort.Slice(vector, func(i, j int) bool {
+		return vector[i][0] < vector[j][0]
+	})
+
+	// fmt.Println((vector))
+	// fmt.Println(vector)
+
+	// file1, err1 := os.Open("python_embeddings.csv")
 	// if err1 != nil {
 	// 	fmt.Println("Error:", err)
 	// 	panic(err.Error())
 	// }
-	// defer file.Close()
+	// defer file1.Close()
 
 	// reader1 := csv.NewReader(file1)
 	// records1, err := reader1.ReadAll()
+	// if err != nil {
+	// 	fmt.Println("Error:", err)
+	// 	panic(err.Error())
+	// }
 
 	// compareOutputs(vector, records1)
 }
 
 // func compareOutputs(records [][]float32, otherRecords [][]string) {
-// 	for row_num, row := range otherRecords {
+// 	for rowNum, row := range otherRecords {
 // 		for ind, entry := range row {
 // 			floatValue, _ := strconv.ParseFloat(entry, 32)
-// 			diff := (float32(floatValue) - records[row_num][ind])
+// 			diff := float32(floatValue) - records[rowNum][ind]
 // 			if diff >= 0.0001 {
-// 				fmt.Println("error on row", row, "entry", ind)
+// 				fmt.Println("error on row", rowNum, "entry", ind)
 // 				panic("diff too large")
 // 			}
 // 		}
 // 		fmt.Println("row successfully compared")
 // 	}
-
 // }
