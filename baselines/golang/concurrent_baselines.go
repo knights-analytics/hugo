@@ -38,7 +38,7 @@ func extractFeatures(records [][]string, featurePipeline *pipelines.FeatureExtra
 	const batchSize = 32
 	var output [][]float32
 	totalProcessed := 0
-	records = records[:100]
+	records = records[:5000]
 
 	type result struct {
 		embeddings [][]float32

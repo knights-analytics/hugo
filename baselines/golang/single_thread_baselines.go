@@ -11,13 +11,18 @@ import (
 	"github.com/knights-analytics/hugot/pipelines"
 )
 
+func check(err error) {
+	if err != nil {
+		panic(err.Error())
+	}
+}
 func extractFeatures(records [][]string, featurePipeline *pipelines.FeatureExtractionPipeline) ([][]float32, time.Duration, int) {
 	start := time.Now()
 
 	const batchSize = 32
 	var output [][]float32
 	totalProcessed := 0
-	records = records[:100]
+	records = records[:5000]
 	batch := make([]string, 0, batchSize) // Pre-allocate capacity for the batch
 
 	fmt.Println("starting pipeline loop")
@@ -59,12 +64,7 @@ func main() {
 	// new hugot instance
 	startInitialization := time.Now()
 	// session, err := hugot.NewSession()
-	session, err := hugot.NewSession(
-		hugot.WithInterOpNumThreads(1),
-		hugot.WithIntraOpNumThreads(1),
-		hugot.WithCpuMemArena(false),
-		hugot.WithMemPattern(false),
-	)
+	session, err := hugot.NewSession()
 	check(err)
 	defer func(session *hugot.Session) {
 		err := session.Destroy()
@@ -115,7 +115,7 @@ func main() {
 		vector = output
 
 		fmt.Printf("Memory usage after iteration %d:\n", i+1)
-		printMemUsage() // Track memory usage after each iteration
+		// printMemUsage() // Track memory usage after each iteration
 	}
 
 	metrics["time per iteration"] = timePerIter
