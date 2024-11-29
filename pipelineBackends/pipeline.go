@@ -137,6 +137,8 @@ func RunSessionOnBatch(batch *PipelineBatch, p *BasePipeline) error {
 		return runORTSessionOnBatch(batch, p)
 	case "XLA":
 		return runXLASessionOnBatch(batch, p)
+	case "GO":
+		return runGoSessionOnBatch(batch, p)
 	}
 	return nil
 }
@@ -160,6 +162,8 @@ func CreateInputTensors(batch *PipelineBatch, inputsMeta []InputOutputInfo, runt
 		return createInputTensorsORT(batch, inputsMeta)
 	case "XLA":
 		return createInputTensorsXLA(batch, inputsMeta, true)
+	case "GO":
+		return createInputTensorsGo(batch, inputsMeta)
 	}
 	return nil
 }
@@ -230,6 +234,8 @@ func CreateModelBackend(model *Model, s *options.Options) error {
 		err = createORTModelBackend(model, s)
 	case "XLA":
 		err = createXLAModelBackend(model, s)
+	case "GO":
+		err = createGoModelBackend(model, s)
 	}
 	return err
 }

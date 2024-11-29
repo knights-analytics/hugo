@@ -12,6 +12,7 @@ type Model struct {
 	OnnxBytes    []byte
 	ORTModel     *ORTModel
 	XLAModel     *XLAModel
+	GoModel      *GoModel
 	Tokenizer    *Tokenizer
 	InputsMeta   []InputOutputInfo
 	OutputsMeta  []InputOutputInfo
