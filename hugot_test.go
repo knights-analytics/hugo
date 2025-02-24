@@ -8,6 +8,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/gomlx/go-huggingface/hub"
 	"github.com/stretchr/testify/assert"
 
 	"github.com/knights-analytics/hugot/pipelineBackends"
@@ -26,13 +27,16 @@ const onnxRuntimeSharedLibrary = "/usr/lib64/onnxruntime.so"
 // test download validation
 
 func TestDownloadValidation(t *testing.T) {
-	err := validateDownloadHfModel("KnightsAnalytics/distilbert-base-uncased-finetuned-sst-2-english", "main", "")
+
+	downloadOptions := NewDownloadOptions()
+
+	_, err := validateDownloadHfModel(hub.New("KnightsAnalytics/distilbert-base-uncased-finetuned-sst-2-english"), downloadOptions)
 	assert.NoError(t, err)
 	// a model without tokenizer.json or .onnx model should error
-	err = validateDownloadHfModel("ByteDance/SDXL-Lightning", "main", "")
+	_, err = validateDownloadHfModel(hub.New("ByteDance/SDXL-Lightning"), downloadOptions)
 	assert.Error(t, err)
 	// a model with the required files in a subfolder should not error
-	err = validateDownloadHfModel("distilbert/distilbert-base-uncased-finetuned-sst-2-english", "main", "")
+	_, err = validateDownloadHfModel(hub.New("distilbert/distilbert-base-uncased-finetuned-sst-2-english"), downloadOptions)
 	assert.NoError(t, err)
 }
 
