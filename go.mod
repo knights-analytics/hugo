@@ -3,9 +3,9 @@ module github.com/knights-analytics/hugot
 go 1.23.3
 
 require (
-	github.com/bodaay/HuggingFaceModelDownloader v0.0.0-20241026025743-cbf2f5e84f54
 	github.com/daulet/tokenizers v1.20.2
 	github.com/gomlx/exceptions v0.0.3
+	github.com/gomlx/go-huggingface v0.1.2-0.20250123072345-fd37956f3956
 	github.com/gomlx/gomlx v0.17.1-0.20250219113350-69ca85de9d85
 	github.com/gomlx/gopjrt v0.6.0
 	github.com/gomlx/onnx-gomlx v0.2.0
@@ -22,11 +22,9 @@ require (
 	github.com/cpuguy83/go-md2man/v2 v2.0.6 // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/dustin/go-humanize v1.0.1 // indirect
-	github.com/fatih/color v1.18.0 // indirect
 	github.com/go-errors/errors v1.5.1 // indirect
 	github.com/go-logr/logr v1.4.2 // indirect
 	github.com/google/uuid v1.6.0 // indirect
-	github.com/mattn/go-colorable v0.1.14 // indirect
 	github.com/modern-go/concurrent v0.0.0-20180306012644-bacd9c7ef1dd // indirect
 	github.com/modern-go/reflect2 v1.0.2 // indirect
 	github.com/pkg/errors v0.9.1 // indirect
